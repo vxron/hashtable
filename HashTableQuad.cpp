@@ -1,6 +1,7 @@
 #include "HashTableQuad.h"
 #include <cmath>
 #include <cstdio>
+#include <random>
 using namespace std;
 
 
@@ -51,18 +52,91 @@ bool HashTableQuad::isPrime(int n){
 
 void HashTableQuad::insert(int n)
 {
-    // TODO
+	// check for duplicate
+    if(isIn(n)==true){
+    	return;
+    }
+
+    int i = n % M;
+    int k=1;
+
+    if(table[i]==0){
+    	table[i]=n; // no need for probing
+    }
+
+    else{
+    	while(table[i]!=0 && k<=M){
+    		i=(n+(k*k))%M;
+    		k++;
+    	}
+    	if(k==M+1){ //cycling; can't insert
+    		return;
+    	}
+    	table[i]=n;
+    }
+    numKeys++;
+    double load=numKeys/(M+0.0);
+    if(load>max_load){
+    	rehash();
+    }
+
 }
 
 void HashTableQuad::rehash()
 {
-    // TODO
+	std::vector<int> tmp = table;
+	int initial_size = table.size();
+
+	// for rehashing, we double the size of the array
+	M*=2;
+	// what can fit (before rehashing) is now max_load times the new size
+	maxNumKeys=max_load*M;
+
+	// but remember we need a prime number for size of table
+	while(!isPrime(M)){
+		M++;
+	}
+
+	// wipe table
+	table.resize(0);
+	// resize table so it contains M elements (new size)
+	table.resize(M,0);
+
+	// numKeys and shit wouldn't change
+	// but we have to reset numKeys to 0 cuz it increments when we call insert function
+	numKeys=0;
+	// replace values
+	for(int i=0;i<initial_size;i++){
+		if(tmp[i]!=0){
+			insert(tmp[i]);
+		}
+	}
 }
 
 bool HashTableQuad::isIn(int n)
 {
-    // TODO, change following code after completing this function
-    return true;
+	// hash index
+	int i = n % M;
+	int k=1;
+
+	// make sure i doesn't surpass
+	while(table[i]!=0){
+		// if table(i) is 0 then the element hasn't been found; not placed via linear probing
+		if(table[i]==n){
+			return true; // element has been found
+		}
+		else{
+			// continue quad probing until a zero element is reached, or element is found
+			i = (n+(k*k)) % M;
+			// if k gets back to original value, it's done the full circle and this table doesn't have the value n
+			if(k == M){ // i.e. n + M^2 % M = n % M, i's original val
+				break;
+			}
+		}
+		k++;
+	}
+	// element n wasn't found
+	return false;
 }
 
 void HashTableQuad::printKeys()
@@ -97,9 +171,71 @@ double HashTableQuad::getMaxLoadFactor() {
     return max_load;
 }
 
+// function for number of probes it takes to insert a certain number
+int HashTableQuad::insertCount(int n){
+	int count=0;
+
+	// check for duplicate
+	if(isIn(n)==true){
+		return 0;
+	}
+
+	int i = n % M;
+	int k=1;
+
+	if(table[i]==0){
+		table[i]=n; // no need for probing
+		count++;
+		return count;
+	}
+
+	else{
+		while(table[i]!=0 && k<=M){
+			i=(n+(k*k))%M;
+			k++;
+			count++;
+		}
+
+		if(k==M+1){ //cycling; can't insert
+			//count++;
+			return count;
+		}
+
+		table[i]=n;
+		count++;
+	}
+
+	return count;
+}
+
 std::vector<double> HashTableQuad::simProbeSuccess()
 {
-    // TODO, change following code after completing this function
-    vector<double> result(9);
-    return result;
+	 vector<double> result(9);
+	    // for loop containing diff load factors
+	    double tryLoad=0;
+	    double maxKeys = 10000;
+	    double avgTries = 100;
+	    for(int j=0;j<9;j++){
+	    	tryLoad+=0.1;
+	    	int k=0;
+	    	double avg2=0;
+	    	while(k<avgTries){
+	    		HashTableQuad tmp = HashTableQuad(maxKeys,tryLoad);
+	    		double avg=0;
+	    		while(tmp.numKeys<maxKeys){
+	    			int n = rand()*rand();
+	    			if(tmp.isIn(n)==false){
+	    				avg+=tmp.insertCount(n);
+	    				tmp.numKeys++;
+	    			}
+	    		}
+	    		k++;
+	    		avg/=maxKeys;
+	    		avg2+=avg;
+	    	}
+	    	avg2/=avgTries;
+	    	result[j]=avg2;
+	    }
+
+	    return result;
 }

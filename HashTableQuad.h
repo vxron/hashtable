@@ -31,6 +31,7 @@ public:
 	int getNumKeys();
 	int getTableSize();
 	double getMaxLoadFactor();
+	int insertCount(int n);
 	static std::vector<double> simProbeSuccess();
 
 	// used for testing

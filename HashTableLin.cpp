@@ -1,6 +1,8 @@
 #include "HashTableLin.h"
 #include <cmath>
 #include <cstdio>
+#include <random>
+#include <set>
 using namespace std;
 
 HashTableLin::HashTableLin(int maxNum, double load)
@@ -51,18 +53,126 @@ bool HashTableLin::isPrime(int n){
 
 void HashTableLin::insert(int n)
 {
-    //j
+	if(isIn(n)==false){
+		// get hash code (index)
+		int i = n % M;
+
+		// insert directly at index if empty
+		if(table[i]==0){
+			table[i]=n;
+		}
+		// otherwise perform linear probing to attempt to find a slot
+		else{
+			/*
+			if(isIn(0)==false){
+				rehash();
+			}
+			*/
+			while(table[i]!=0){ // once it equals 0, we can insert at this index
+				i=(i+1)%M;
+			}
+			// break when it's 0
+			table[i]=n;
+
+		}
+
+		// increment properties
+		numKeys++;
+		double load = numKeys/(M+0.0);
+		if(load>max_load){
+			rehash();
+		}
+	}
+}
+
+// function for number of probes it takes to insert a certain number
+int HashTableLin::insertCount(int n){
+	int count=0;
+
+	// check for duplicate
+	if(isIn(n)==true){
+		return 0;
+	}
+
+	int i = n % M;
+
+	if(table[i]==0){
+		table[i]=n;
+		count++;
+		return count;
+	}
+
+	else{
+		while(table[i]!=0){
+			i=(i+1)%M;
+			count++;
+		}
+		/*
+		if(i==n%M){ //cycling; can't insert
+			return count;
+		}
+		*/
+	}
+	table[i]=n;
+	count++;
+
+	return count;
 }
 
 void HashTableLin::rehash()
 {
-    // TODO
+    std::vector<int> tmp = table;
+    int initial_size = table.size();
+
+    // for rehashing, we double the size of the array
+    M*=2;
+    // what can fit (before rehashing) is now max_load times the new size
+    maxNumKeys=max_load*M;
+
+    // but remember we need a prime number for size of table
+    while(!isPrime(M)){
+    	M++;
+    }
+
+    // wipe table
+    table.resize(0);
+    // resize table so it contains M elements (new size)
+    table.resize(M,0);
+
+    // numKeys and shit wouldn't change
+    // but we have to reset numKeys to 0 cuz it increments when we call insert function
+    numKeys=0;
+    // replace values
+    for(int i=0;i<initial_size;i++){
+    	if(tmp[i]!=0){
+    		insert(tmp[i]);
+    	}
+    }
+
 }
 
 bool HashTableLin::isIn(int n)
 {
-    // hash
-    return true;
+	// hash index
+	int i = n % M;
+
+	// make sure i doesn't surpass
+	while(table[i]!=0){
+		// if table(i) is 0 then the element hasn't been found; not placed via linear probing
+		if(table[i]==n){
+			return true; // element has been found
+		}
+		else{
+			// continue linear probing until a zero element is reached, or element is found
+			i = (i + 1) % M;
+			// if i gets back to original value, it's done the full circle and this table doesn't have the value n
+			if(i == (n % M)){
+				break;
+			}
+		}
+	}
+	// element n wasn't found
+    return false;
 }
 
 void HashTableLin::printKeys()
@@ -99,8 +209,33 @@ double HashTableLin::getMaxLoadFactor() {
 
 std::vector<double> HashTableLin::simProbeSuccess()
 {
-    // TODO, change following code after completing this function
     vector<double> result(9);
+    // for loop containing diff load factors
+    double tryLoad=0;
+    double maxKeys = 10000;
+    double avgTries = 100;
+    for(int j=0;j<9;j++){
+    	tryLoad+=0.1;
+    	int k=0;
+    	double avg2=0;
+    	double avg=0;
+    	while(k<avgTries){
+    		HashTableLin tmp = HashTableLin(maxKeys,tryLoad);
+    		while(tmp.numKeys<maxKeys){
+    			int n = rand()*rand();
+    			if(tmp.isIn(n)==false){
+    				avg+=tmp.insertCount(n);
+    				tmp.numKeys++;
+    			}
+    		}
+    		k++;
+    		avg/=maxKeys;
+    		avg2+=avg;
+    	}
+    	avg2/=avgTries;
+    	result[j]=avg2;
+    }
+
     return result;
 }
 
